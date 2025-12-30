@@ -14,6 +14,8 @@ Hooks.once('ready', () => {
             // 1. Snapshot the System Data
             // We use deepClone to create a plain JS object with the current values.
             const systemData = foundry.utils.deepClone(actor.system);
+            console.log("Companion Bridge | Snapshotting Actor System Data Attributes AC:", systemData.attributes.ac);
+            console.log("Companion Bridge | Snapshotting Actor System Data Spells:", systemData.spells);
 
             // 2. Snapshot the Items (and their derived labels/stats)
             const itemsData = actor.items.map(i => {
