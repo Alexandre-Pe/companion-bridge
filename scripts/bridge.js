@@ -12,17 +12,12 @@ Hooks.once('ready', () => {
             
             if (!actor) return;
 
-            // actor.system contains the derived data because the Client has already run prepareData()
-            const payload = {
-                actor_data: actor
-            };
-
             // Emit back to the Python App
             // We use the same event name, the Python app needs to filter by checking if it's a response
             game.socket.emit('module.companion-bridge', {
                 type: 'RESPONSE',
                 requestId: data.requestId,
-                actor: payload
+                actor: actor
             });
         }
     });
