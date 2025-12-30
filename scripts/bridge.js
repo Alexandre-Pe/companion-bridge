@@ -13,7 +13,16 @@ Hooks.once('ready', () => {
             if (!actor) return;
             // 1. Snapshot the System Data
             // We use deepClone to create a plain JS object with the current values.
-            const systemData = foundry.utils.deepClone(actor.system);
+            // const systemData = foundry.utils.deepClone(actor.system); // This didn't work either
+            // Let's try to go one level deeper manually
+            const systemData = {};
+            for (const [key, value] of Object.entries(actor.system)) {
+                if (typeof value === 'object' && value !== null) {
+                    systemData[key] = foundry.utils.deepClone(value);
+                } else {
+                        systemData[key] = value;
+                }
+            };
             console.log("Companion Bridge | Snapshotting Actor System Data Attributes AC:", systemData.attributes.ac);
             console.log("Companion Bridge | Snapshotting Actor System Data Spells:", systemData.spells);
 
