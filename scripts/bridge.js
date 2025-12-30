@@ -18,9 +18,14 @@ Hooks.once('ready', () => {
             game.socket.emit('module.companion-bridge', {
                 type: 'RESPONSE',
                 requestId: data.requestId,
-                actor: actor, // For some reason sending the whole actor doesn't include derived data anymore :\
-                ac: actor.system.attributes.ac.value, // Testing if we can send them
-                spells: actor.system.spells,
+                actor: {
+                    name: actor.name,
+                    _id: actor._id,
+                    img: actor.img,
+                    system: actor.system,
+                    items: actor.items,
+                    effects: actor.effects
+                } // Trying to "rebuild" the actor object with only necessary data
             });
         }
     });
