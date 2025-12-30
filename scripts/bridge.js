@@ -11,14 +11,16 @@ Hooks.once('ready', () => {
             const actor = game.actors.get(data.actorId);
             
             if (!actor) return;
-            console.log(actor.system.attributes);
+            console.log(actor.system.attributes); // Confirmed that it contains all the derived data
 
             // Emit back to the Python App
             // We use the same event name, the Python app needs to filter by checking if it's a response
             game.socket.emit('module.companion-bridge', {
                 type: 'RESPONSE',
                 requestId: data.requestId,
-                actor: actor
+                actor: actor, // For some reason sending the whole actor doesn't include derived data anymore :\
+                ac: actor.system.attributes.ac.value, // Testing if we can send them
+                spells: actor.system.spells,
             });
         }
     });
