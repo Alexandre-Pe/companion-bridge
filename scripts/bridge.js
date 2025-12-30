@@ -11,6 +11,7 @@ Hooks.once('ready', () => {
             const actor = game.actors.get(data.actorId);
             
             if (!actor) return;
+            console.log(actor.system.attributes);
 
             // Emit back to the Python App
             // We use the same event name, the Python app needs to filter by checking if it's a response
