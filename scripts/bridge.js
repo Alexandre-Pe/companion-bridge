@@ -7,6 +7,7 @@ Hooks.once('ready', () => {
         // Only the GM should reply to avoid duplicate responses
         if (!game.user.isGM) return;
 
+        // --- HANDLER 1: GET DATA ---
         if (data.action === 'GET_ACTOR_DERIVED') {
             const actor = game.actors.get(data.actorId);
             
@@ -59,6 +60,16 @@ Hooks.once('ready', () => {
                 requestId: data.requestId,
                 actor: payload
             });
+        }
+        // --- HANDLER 2: UPDATE DATA ---
+        if (data.action === 'UPDATE_ACTOR') {
+            const actor = game.actors.get(data.actorId);
+            if (!actor) return;
+
+            console.log("Companion Bridge | Updating Actor:", data.actorId, data.updateData);
+
+            // Execute the update
+            await actor.update(data.updateData);
         }
     });
 });
