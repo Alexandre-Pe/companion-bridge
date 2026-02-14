@@ -22,9 +22,8 @@ Hooks.once('ready', () => {
                         systemData[key] = value;
                 }
             };
-            // Put systemData.attributes.hd to null
             if (systemData.attributes && systemData.attributes.hd) {
-                systemData.attributes.hd = null;
+                systemData.attributes.hd = systemData.attributes.hd.bySize;
             }
 
             // 2. Snapshot the Items (and their derived labels/stats)
