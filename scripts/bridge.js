@@ -6,6 +6,7 @@ Hooks.once('ready', () => {
         
         // Only the GM should reply to avoid duplicate responses
         if (!game.user.isGM) return;
+        console.log("Companion Bridge | Received data:", data);
 
         // --- HANDLER 1: GET DATA ---
         if (data.action === 'GET_ACTOR_DERIVED') {
@@ -69,6 +70,21 @@ Hooks.once('ready', () => {
 
             // Execute the update
             await actor.update(data.updateData);
+        }
+        // --- HANDLER 3: Rest ---
+        if (data.action === 'REST') {
+            const actor = game.actors.get(data.actorId);
+            if (!actor) return;
+
+            console.log("Companion Bridge | Resting Actor:", data.actorId, data.restType, data.options);
+
+            if (data.restType === 'short') {
+                await actor.shortRest(data.options);
+            } else if (data.restType === 'long') {
+                await actor.longRest(data.options);
+            } else {
+                console.warn("Companion Bridge | Unknown rest type:", data.restType);
+            }
         }
     });
 });
