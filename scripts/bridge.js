@@ -71,7 +71,7 @@ Hooks.once('ready', () => {
             // Execute the update
             await actor.update(data.updateData);
         }
-        // --- HANDLER 3: Rest ---
+        // --- HANDLER 3: REST ---
         if (data.action === 'REST') {
             const actor = game.actors.get(data.actorId);
             if (!actor) return;
@@ -84,6 +84,121 @@ Hooks.once('ready', () => {
                 await actor.longRest(data.options);
             } else {
                 console.warn("Companion Bridge | Unknown rest type:", data.restType);
+            }
+        }
+        // --- HANDLER 4: ROLL ATTACK & DAMAGE ---
+        if (data.action === 'ROLL_ATTACK') {
+            const actor = game.actors.get(data.actorId);
+            if (!actor) return console.warn("Bridge | Actor not found:", data.actorId);
+            
+            const item = actor.items.get(data.itemId);
+            if (!item) return console.warn("Bridge | Item not found:", data.itemId);
+
+            // 1. Resolve Activity
+            let activity = data.activityId 
+                ? item.system.activities?.get(data.activityId) 
+                : item.system.activities?.find(a => a.type === "attack");
+
+            if (!activity) return console.warn(`Bridge | No Attack Activity found on ${item.name}`);
+
+            const clientOpts = data.options || {};
+            const isFastForward = clientOpts.fastForward !== false; // Default to true if undefined
+
+            // --- STEP A: ROLL ATTACK ---
+            const dummyEvent = { 
+                preventDefault: () => {},
+                stopPropagation: () => {},
+                target: { closest: () => null }
+            };
+
+            const attackConfig = {
+                event: {
+                    ...dummyEvent,
+                    shiftKey: clientOpts.fastForward || false,
+                    altKey: clientOpts.advantage || false,
+                    ctrlKey: clientOpts.disadvantage || false,
+                },
+                ammunition: clientOpts.ammunition || undefined,
+                attackMode: clientOpts.attackMode || undefined, 
+                mastery: clientOpts.mastery || undefined,
+                rolls: [{
+                    options: {
+                        advantage: clientOpts.advantage,
+                        disadvantage: clientOpts.disadvantage
+                    },
+                    parts: clientOpts.bonus ? [clientOpts.bonus] : []
+                }]
+            };
+
+            const dialogConfig = { configure: !isFastForward };
+            const messageConfig = { create: true };
+
+            try {
+                // 1. EXECUTE ATTACK
+                const attackRolls = await activity.rollAttack(attackConfig, dialogConfig, messageConfig);
+
+                // If user closed dialog or roll failed
+                if (!attackRolls || attackRolls.length === 0) return; 
+
+                const attackResult = attackRolls[0];
+                const isCritical = attackResult.isCritical;
+                const isFumble = attackResult.isFumble;
+
+                // --- STEP B: ROLL DAMAGE ---
+                
+                let damageRolls = [];
+                
+                if (activity.damage?.parts?.length > 0) {
+
+                    const damageConfig = {
+                        event: dummyEvent,
+                        
+                        // FIX: 'critical' must be at the top level of the config object
+                        isCritical: isCritical,
+                    };
+
+                    // We reuse the same dialog/message config
+                    // dialogConfig is still { configure: false } so it auto-rolls
+                    damageRolls = await activity.rollDamage(damageConfig, dialogConfig, messageConfig);
+                }
+
+                // --- STEP C: SEND RESPONSE ---
+                
+                const responsePayload = {
+                    type: 'ROLL_RESULT',
+                    requestId: data.requestId,
+                    
+                    // Attack Data
+                    attack: {
+                        total: attackResult.total,
+                        formula: attackResult.formula,
+                        // Extract dice details for UI visualization
+                        dice: attackResult.dice.map(d => ({
+                            faces: d.faces,
+                            results: d.results.map(r => r.result)
+                        })),
+                        isCritical: isCritical,
+                        isFumble: isFumble
+                    },
+
+                    // Damage Data
+                    damage: damageRolls.map(d => ({
+                        total: d.total,
+                        formula: d.formula,
+                        type: d.options.type, 
+                        isCritical: d.options.critical || d.options.isCritical // Check both flags
+                    }))
+                };
+
+                game.socket.emit('module.companion-bridge', responsePayload);
+
+            } catch (err) {
+                console.error("Bridge | Roll Failed:", err);
+                game.socket.emit('module.companion-bridge', {
+                    type: 'ROLL_ERROR',
+                    requestId: data.requestId,
+                    message: err.message
+                });
             }
         }
     });
